@@ -1,0 +1,14 @@
+#!/bin/sh
+
+# 1. Forest
+#export BEMENU_OPTS="--tb #0b1f14 --tf #d8ffe8 --fb #0f2a1a --ff #eafff1 --nb #07150d --nf #b7d7c3 --hb #1f5f3a --hf #f4fff8 --sb #2e8b57 --sf #061108 --ab #0a1c11 --af #a4c9b1 --scb #0f2a1a --scf #2e8b57 --bdr #2e8b57"
+# 2. Mint Dark
+#export BEMENU_OPTS="--tb #10251f --tf #cffff0 --fb #123027 --ff #ecfff7 --nb #081713 --nf #b9ded1 --hb #2dd4a3 --hf #04100c --sb #6ee7b7 --sf #03100b --ab #0d211b --af #a7d7c7 --scb #123027 --scf #6ee7b7 --bdr #6ee7b7"
+# 3. Neon Terminal
+#export BEMENU_OPTS="--tb #001b0c --tf #7cff9b --fb #002612 --ff #b6ffc6 --nb #000d06 --nf #5ee879 --hb #00ff66 --hf #001406 --sb #39ff88 --sf #001406 --ab #001208 --af #4bd96a --scb #002612 --scf #00ff66 --bdr #00ff66"
+# 4. Olive
+#export BEMENU_OPTS="--tb #1c2112 --tf #eef5c8 --fb #252b17 --ff #fbffe3 --nb #11150a --nf #c8d6a3 --hb #6b8e23 --hf #fbffe3 --sb #9acd32 --sf #11150a --ab #181d0f --af #b8c98f --scb #252b17 --scf #9acd32 --bdr #6b8e23"
+# 5. Matcha
+export BEMENU_OPTS="--tb #18251a --tf #e5f6df --fb #203322 --ff #f6fff0 --nb #0d160f --nf #c5d8bf --hb #7fb069 --hf #071007 --sb #a7c957 --sf #071007 --ab #142016 --af #b4c9ad --scb #203322 --scf #a7c957 --bdr #7fb069"
+
+dmenu_path | bemenu | sh
