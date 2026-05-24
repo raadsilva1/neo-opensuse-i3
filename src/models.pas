@@ -28,6 +28,7 @@ type
     LogFile: string;
     InstallXinitrc: TInstallXinitrcMode;
     NvidiaPolicy: TNvidiaPolicy;
+    Wayland: Boolean;
     Users: TStringArray;
     ExcludedUsers: TStringArray;
   end;

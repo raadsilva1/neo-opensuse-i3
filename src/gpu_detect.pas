@@ -69,9 +69,9 @@ begin
         AddString(Result.Warnings, 'NVIDIA detected: platform-specific driver packages skipped');
     end;
   end;
-  if Pos('virtualbox', L) > 0 then begin Result.Summary := 'VirtualBox graphics'; AddPkg(Result, 'virtualbox-guest-x11'); end;
-  if Pos('vmware', L) > 0 then begin Result.Summary := 'VMware graphics'; AddPkg(Result, 'xf86-video-vmware'); end;
-  if (Pos('virtio', L) > 0) or (Pos('qxl', L) > 0) then begin Result.Summary := 'QEMU/KVM virtual graphics'; AddPkg(Result, 'xf86-video-virtio'); end;
+  if Pos('virtualbox', L) > 0 then begin Result.Summary := 'VirtualBox graphics'; if not Options.Wayland then AddPkg(Result, 'virtualbox-guest-x11'); end;
+  if Pos('vmware', L) > 0 then begin Result.Summary := 'VMware graphics'; if not Options.Wayland then AddPkg(Result, 'xf86-video-vmware'); end;
+  if (Pos('virtio', L) > 0) or (Pos('qxl', L) > 0) then begin Result.Summary := 'QEMU/KVM virtual graphics'; if not Options.Wayland then AddPkg(Result, 'xf86-video-virtio'); end;
   if Assigned(Log) then
   begin
     Log.Info('GPU detection: ' + Result.Summary);

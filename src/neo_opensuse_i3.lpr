@@ -20,6 +20,16 @@ begin
   Halt(Code);
 end;
 
+function JsonBool(Value: Boolean): string;
+begin
+  if Value then Result := 'true' else Result := 'false';
+end;
+
+function JsonComma(Condition: Boolean): string;
+begin
+  if Condition then Result := ',' else Result := '';
+end;
+
 procedure WriteUserSummaries(const Users: TUserArray; const Ctx: TAppContext);
 var
   I: Integer;
@@ -40,6 +50,7 @@ begin
     Writeln(F, JsonPair('user', Users[I].Name));
     Writeln(F, JsonPair('assets_dir', Ctx.AssetsDir));
     Writeln(F, JsonPair('theme', Ctx.Options.Theme));
+    Writeln(F, JsonPair('wayland', JsonBool(Ctx.Options.Wayland)));
     Writeln(F, JsonPair('log_file', Ctx.Log.TextPath, True));
     Writeln(F, '}');
     CloseFile(F);
@@ -58,16 +69,6 @@ begin
     Writeln(ErrOutput, '  - ', Missing[I]);
 end;
 
-function JsonBool(Value: Boolean): string;
-begin
-  if Value then Result := 'true' else Result := 'false';
-end;
-
-function JsonComma(Condition: Boolean): string;
-begin
-  if Condition then Result := ',' else Result := '';
-end;
-
 procedure AddLine(L: TStringList; const S: string);
 begin
   L.Add(S);
@@ -78,9 +79,23 @@ var
   L: TStringList;
   I: Integer;
   P: string;
-  AssetFiles: array[0..6] of string = (
+  AssetFilesXorg: array[0..6] of string = (
     'i3/config',
     'bin/lbemenu',
+    'kitty/kitty.conf',
+    'kitty/themes/Emerald-Night.conf',
+    'kitty/themes/Forest-Moss.conf',
+    'kitty/themes/Sage-Light.conf',
+    'wallpapers/suse.png');
+  AssetFilesWayland: array[0..12] of string = (
+    'sway/config',
+    'bin/lfuzzel',
+    'sway/themes/Emerald-Night.conf',
+    'sway/themes/Forest-Moss.conf',
+    'sway/themes/Sage-Light.conf',
+    'fuzzel/themes/Emerald-Night.ini',
+    'fuzzel/themes/Forest-Moss.ini',
+    'fuzzel/themes/Sage-Light.ini',
     'kitty/kitty.conf',
     'kitty/themes/Emerald-Night.conf',
     'kitty/themes/Forest-Moss.conf',
@@ -98,6 +113,7 @@ begin
     AddLine(L, '  "assets_dir": "' + JsonEscape(Ctx.AssetsDir) + '",');
     AddLine(L, '  "asset_source": "' + JsonEscape(Ctx.AssetSource) + '",');
     AddLine(L, '  "selected_theme": "' + JsonEscape(Ctx.Options.Theme) + '",');
+    AddLine(L, '  "wayland": ' + JsonBool(Ctx.Options.Wayland) + ',');
     AddLine(L, '  "install_xinitrc": ' + JsonBool(InstallXinitrc) + ',');
     AddLine(L, '  "log_file": "' + JsonEscape(Ctx.Log.TextPath) + '",');
     AddLine(L, '  "os": {');
@@ -110,10 +126,21 @@ begin
     AddLine(L, '  "display_manager": { "name": "' + JsonEscape(Ctx.DisplayManager.Name) + '", "running": ' + JsonBool(Ctx.DisplayManager.Running) + ', "detail": "' + JsonEscape(Ctx.DisplayManager.Detail) + '" },');
     AddLine(L, '  "gpu": { "summary": "' + JsonEscape(Ctx.GPU.Summary) + '", "packages": "' + JsonEscape(JoinStrings(Ctx.GPU.Packages, ', ')) + '", "warnings": "' + JsonEscape(JoinStrings(Ctx.GPU.Warnings, '; ')) + '" },');
     AddLine(L, '  "asset_checksums": [');
-    for I := Low(AssetFiles) to High(AssetFiles) do
+    if Ctx.Options.Wayland then
     begin
-      P := Ctx.AssetsDir + DirectorySeparator + AssetFiles[I];
-      AddLine(L, '    { "path": "' + JsonEscape(AssetFiles[I]) + '", "sha256": "' + JsonEscape(SHA256File(P)) + '" }' + JsonComma(I < High(AssetFiles)));
+      for I := Low(AssetFilesWayland) to High(AssetFilesWayland) do
+      begin
+        P := Ctx.AssetsDir + DirectorySeparator + AssetFilesWayland[I];
+        AddLine(L, '    { "path": "' + JsonEscape(AssetFilesWayland[I]) + '", "sha256": "' + JsonEscape(SHA256File(P)) + '" }' + JsonComma(I < High(AssetFilesWayland)));
+      end;
+    end
+    else
+    begin
+      for I := Low(AssetFilesXorg) to High(AssetFilesXorg) do
+      begin
+        P := Ctx.AssetsDir + DirectorySeparator + AssetFilesXorg[I];
+        AddLine(L, '    { "path": "' + JsonEscape(AssetFilesXorg[I]) + '", "sha256": "' + JsonEscape(SHA256File(P)) + '" }' + JsonComma(I < High(AssetFilesXorg)));
+      end;
     end;
     AddLine(L, '  ],');
     AddLine(L, '  "target_users": [');
@@ -191,7 +218,7 @@ begin
 
     if not LocateAssets(Ctx.Options, Ctx.AssetsDir, Ctx.AssetSource) then
       FailAndHalt(ExitMissingAssets, 'assets directory was not found; checked --assets-dir, NEO_OPENSUSE_I3_ASSETS, executable ./assets, and cwd ./assets', Log);
-    if not ValidateAssets(Ctx.AssetsDir, Ctx.Options.Theme, Log, MissingAssets, AssetWarning) then
+    if not ValidateAssets(Ctx.AssetsDir, Ctx.Options.Theme, Ctx.Options.Wayland, Log, MissingAssets, AssetWarning) then
     begin
       PrintAssetFailure(Ctx.AssetsDir, MissingAssets);
       Halt(ExitMissingAssets);
@@ -217,7 +244,7 @@ begin
       Log.Warn('no sudo-capable human target users were detected');
     Ctx.DisplayManager := DetectDisplayManager(Log);
     Ctx.GPU := DetectGPU(Ctx.Options, Log);
-    if not ResolvePackages(Ctx.GPU, Log, Ctx.PackageDecisions, Ctx.MissingRequiredPackages, Ctx.PackagesToInstall) then
+    if not ResolvePackages(Ctx.Options, Ctx.GPU, Log, Ctx.PackageDecisions, Ctx.MissingRequiredPackages, Ctx.PackagesToInstall) then
       FailAndHalt(ExitPackageFailure, 'missing required package candidates: ' + JoinStrings(Ctx.MissingRequiredPackages, ', '), Log);
 
     ShowWelcome(Ctx);
@@ -227,23 +254,26 @@ begin
 
     Success := True;
     ExitCode := ExitSuccess;
-    InstallXinitrc := ShouldInstallXinitrc(Ctx.Options.InstallXinitrc, Ctx.DisplayManager);
+    InstallXinitrc := ShouldInstallXinitrc(Ctx.Options.InstallXinitrc, Ctx.DisplayManager, Ctx.Options.Wayland);
 
     if not InstallPackages(Ctx.PackagesToInstall, Ctx.Options.DryRun, Log) then
     begin
       Success := False; ExitCode := ExitPackageFailure;
     end;
-    if Success and (not InstallSessionFiles(Ctx.SystemBackupRoot, Ctx.Options.DryRun, Log)) then
+    if Success and (not InstallSessionFiles(Ctx.SystemBackupRoot, Ctx.Options.DryRun, Log, Ctx.Options.Wayland)) then
     begin
       Success := False; ExitCode := ExitFileFailure;
     end;
-    if Success and (not InstallSystemAssets(Ctx.AssetsDir, Ctx.SystemBackupRoot, Ctx.Options.DryRun, Log)) then
-      Log.Warn('continuing after system lbemenu install warning because per-user fallback is installed');
-    if Success and (not InstallAssetsForUsers(Ctx.AssetsDir, Ctx.BackupStamp, Ctx.Users, InstallXinitrc, Ctx.Options.DryRun, Log)) then
+    if Success and (not InstallSystemAssets(Ctx.AssetsDir, Ctx.SystemBackupRoot, Ctx.Options.Wayland, Ctx.Options.DryRun, Log)) then
+      if Ctx.Options.Wayland then
+        Log.Warn('continuing after system lfuzzel install warning because per-user fallback is installed')
+      else
+        Log.Warn('continuing after system lbemenu install warning because per-user fallback is installed');
+    if Success and (not InstallAssetsForUsers(Ctx.AssetsDir, Ctx.BackupStamp, Ctx.Users, InstallXinitrc, Ctx.Options.Wayland, Ctx.Options.Theme, Ctx.Options.DryRun, Log)) then
     begin
       Success := False; ExitCode := ExitFileFailure;
     end;
-    if Success and (not ValidateInstall(Ctx.Users, Ctx.AssetsDir, Ctx.Options.Theme, InstallXinitrc, Ctx.Options.DryRun, Log)) then
+    if Success and (not ValidateInstall(Ctx.Users, Ctx.AssetsDir, Ctx.Options.Theme, InstallXinitrc, Ctx.Options.Wayland, Ctx.Options.DryRun, Log)) then
     begin
       Success := False; ExitCode := ExitValidationFailure;
     end;

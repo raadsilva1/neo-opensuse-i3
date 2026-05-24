@@ -17,6 +17,11 @@ implementation
 uses
   constants, models, tui_theme, tui_widgets;
 
+function SessionName(Wayland: Boolean): string;
+begin
+  if Wayland then Result := 'Sway (Wayland)' else Result := 'i3 (Xorg)';
+end;
+
 procedure Header(const Title: string; Plain: Boolean);
 begin
   if Plain then
@@ -40,6 +45,7 @@ begin
   if Ctx.Options.DryRun then ModeText := 'dry-run' else ModeText := 'install';
   Writeln('Version: ', AppVersion);
   Writeln('Mode: ', ModeText);
+  Writeln('Session: ', SessionName(Ctx.Options.Wayland));
   Writeln('Theme: ', Ctx.Options.Theme);
 end;
 
@@ -69,6 +75,7 @@ begin
         Header('welcome', Ctx.Options.Plain);
         Writeln('Installer: ', AppName, ' ', AppVersion);
         Writeln('Mode: install');
+        Writeln('Session: ', SessionName(Ctx.Options.Wayland));
       end;
     1:
       begin
@@ -108,14 +115,20 @@ begin
       begin
         Header('session', Ctx.Options.Plain);
         PrintStatus('Display manager', 'success', Ctx.DisplayManager.Name + ', running=' + BoolText(Ctx.DisplayManager.Running), Ctx.Options.Plain);
-        Writeln('X session entry: /usr/share/xsessions/neo-opensuse-i3.desktop');
+        if Ctx.Options.Wayland then
+          Writeln('Wayland session entry: /usr/share/wayland-sessions/neo-opensuse-sway.desktop')
+        else
+          Writeln('X session entry: /usr/share/xsessions/neo-opensuse-i3.desktop');
       end;
     8:
       begin
         Header('progress', Ctx.Options.Plain);
         PrintStatus('Package install', 'pending', 'zypper install only missing selected packages', Ctx.Options.Plain);
         PrintStatus('File install', 'pending', 'session files and per-user configuration with backups', Ctx.Options.Plain);
-        PrintStatus('Validation', 'pending', 'i3, Kitty, session launcher, lbemenu, ownership, and logs', Ctx.Options.Plain);
+        if Ctx.Options.Wayland then
+          PrintStatus('Validation', 'pending', 'sway, Kitty, session launcher, lfuzzel, ownership, and logs', Ctx.Options.Plain)
+        else
+          PrintStatus('Validation', 'pending', 'i3, Kitty, session launcher, lbemenu, ownership, and logs', Ctx.Options.Plain);
       end;
   else
     begin

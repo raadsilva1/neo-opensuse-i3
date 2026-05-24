@@ -7,8 +7,8 @@ interface
 uses
   SysUtils, models, logger;
 
-function InstallAssetsForUsers(const AssetsDir, BackupStamp: string; const Users: TUserArray; InstallXinitrc: Boolean; DryRun: Boolean; Log: TLogger): Boolean;
-function InstallSystemAssets(const AssetsDir, BackupRoot: string; DryRun: Boolean; Log: TLogger): Boolean;
+function InstallAssetsForUsers(const AssetsDir, BackupStamp: string; const Users: TUserArray; InstallXinitrc: Boolean; Wayland: Boolean; const Theme: string; DryRun: Boolean; Log: TLogger): Boolean;
+function InstallSystemAssets(const AssetsDir, BackupRoot: string; Wayland: Boolean; DryRun: Boolean; Log: TLogger): Boolean;
 
 implementation
 
@@ -26,7 +26,7 @@ begin
     U.Home + DirectorySeparator + 'Pictures/Wallpapers', BackupRoot, U.Name, U.UID, U.GID, &644, DryRun, Log);
 end;
 
-function InstallAssetsForUsers(const AssetsDir, BackupStamp: string; const Users: TUserArray; InstallXinitrc: Boolean; DryRun: Boolean; Log: TLogger): Boolean;
+function InstallAssetsForUsers(const AssetsDir, BackupStamp: string; const Users: TUserArray; InstallXinitrc: Boolean; Wayland: Boolean; const Theme: string; DryRun: Boolean; Log: TLogger): Boolean;
 var
   I: Integer;
   U: TUserInfo;
@@ -38,15 +38,29 @@ begin
   begin
     U := Users[I];
     Root := UserBackupRoot(U, BackupStamp);
-    Result := EnsureDirOwned(U.Home + '/.config/i3', U.UID, U.GID, &755, DryRun, Log) and Result;
+    if Wayland then
+    begin
+      Result := EnsureDirOwned(U.Home + '/.config/sway', U.UID, U.GID, &755, DryRun, Log) and Result;
+      Result := EnsureDirOwned(U.Home + '/.config/sway/themes', U.UID, U.GID, &755, DryRun, Log) and Result;
+      Result := EnsureDirOwned(U.Home + '/.config/fuzzel', U.UID, U.GID, &755, DryRun, Log) and Result;
+      Result := InstallFileAtomic(AssetsDir + '/sway/config', U.Home + '/.config/sway/config', Root, U.Name, U.UID, U.GID, &644, DryRun, Log, R) and Result;
+      Result := CopyTreeFiles(AssetsDir + '/sway/themes', U.Home + '/.config/sway/themes', Root, U.Name, U.UID, U.GID, &644, DryRun, Log) and Result;
+      Result := InstallFileAtomic(AssetsDir + '/sway/themes/' + Theme + '.conf', U.Home + '/.config/sway/themes/active.conf', Root, U.Name, U.UID, U.GID, &644, DryRun, Log, R) and Result;
+      Result := InstallFileAtomic(AssetsDir + '/fuzzel/themes/' + Theme + '.ini', U.Home + '/.config/fuzzel/fuzzel.ini', Root, U.Name, U.UID, U.GID, &644, DryRun, Log, R) and Result;
+      Result := InstallFileAtomic(AssetsDir + '/bin/lfuzzel', U.Home + '/.local/bin/lfuzzel', Root, U.Name, U.UID, U.GID, &755, DryRun, Log, R) and Result;
+    end
+    else
+    begin
+      Result := EnsureDirOwned(U.Home + '/.config/i3', U.UID, U.GID, &755, DryRun, Log) and Result;
+      Result := InstallFileAtomic(AssetsDir + '/i3/config', U.Home + '/.config/i3/config', Root, U.Name, U.UID, U.GID, &644, DryRun, Log, R) and Result;
+      Result := InstallFileAtomic(AssetsDir + '/bin/lbemenu', U.Home + '/.local/bin/lbemenu', Root, U.Name, U.UID, U.GID, &755, DryRun, Log, R) and Result;
+    end;
     Result := EnsureDirOwned(U.Home + '/.config/kitty/themes', U.UID, U.GID, &755, DryRun, Log) and Result;
     Result := EnsureDirOwned(U.Home + '/.local/bin', U.UID, U.GID, &755, DryRun, Log) and Result;
     Result := EnsureDirOwned(U.Home + '/Pictures/Screenshots', U.UID, U.GID, &755, DryRun, Log) and Result;
     Result := EnsureDirOwned(U.Home + '/Pictures/Wallpapers', U.UID, U.GID, &755, DryRun, Log) and Result;
-    Result := InstallFileAtomic(AssetsDir + '/i3/config', U.Home + '/.config/i3/config', Root, U.Name, U.UID, U.GID, &644, DryRun, Log, R) and Result;
     Result := InstallFileAtomic(AssetsDir + '/kitty/kitty.conf', U.Home + '/.config/kitty/kitty.conf', Root, U.Name, U.UID, U.GID, &644, DryRun, Log, R) and Result;
     Result := CopyTreeFiles(AssetsDir + '/kitty/themes', U.Home + '/.config/kitty/themes', Root, U.Name, U.UID, U.GID, &644, DryRun, Log) and Result;
-    Result := InstallFileAtomic(AssetsDir + '/bin/lbemenu', U.Home + '/.local/bin/lbemenu', Root, U.Name, U.UID, U.GID, &755, DryRun, Log, R) and Result;
     Result := InstallWallpaperTree(AssetsDir, U, Root, DryRun, Log) and Result;
     if InstallXinitrc then
       Result := InstallXinitrcForUser(U, Root, DryRun, Log) and Result;
@@ -55,14 +69,24 @@ begin
   end;
 end;
 
-function InstallSystemAssets(const AssetsDir, BackupRoot: string; DryRun: Boolean; Log: TLogger): Boolean;
+function InstallSystemAssets(const AssetsDir, BackupRoot: string; Wayland: Boolean; DryRun: Boolean; Log: TLogger): Boolean;
 var
   R: TFileOpResult;
 begin
-  Result := InstallFileAtomic(AssetsDir + '/bin/lbemenu', '/usr/local/bin/lbemenu',
-    BackupRoot, 'root', 0, 0, &755, DryRun, Log, R);
-  if (not Result) and Assigned(Log) then
-    Log.Warn('system lbemenu install failed; per-user ~/.local/bin/lbemenu remains available');
+  if Wayland then
+  begin
+    Result := InstallFileAtomic(AssetsDir + '/bin/lfuzzel', '/usr/local/bin/lfuzzel',
+      BackupRoot, 'root', 0, 0, &755, DryRun, Log, R);
+    if (not Result) and Assigned(Log) then
+      Log.Warn('system lfuzzel install failed; per-user ~/.local/bin/lfuzzel remains available');
+  end
+  else
+  begin
+    Result := InstallFileAtomic(AssetsDir + '/bin/lbemenu', '/usr/local/bin/lbemenu',
+      BackupRoot, 'root', 0, 0, &755, DryRun, Log, R);
+    if (not Result) and Assigned(Log) then
+      Log.Warn('system lbemenu install failed; per-user ~/.local/bin/lbemenu remains available');
+  end;
 end;
 
 end.

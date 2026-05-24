@@ -7,7 +7,7 @@ interface
 uses
   SysUtils, BaseUnix, models, logger;
 
-function ValidateAssets(const AssetsDir, Theme: string; Log: TLogger; out Missing: TStringArray; out Warning: string): Boolean;
+function ValidateAssets(const AssetsDir, Theme: string; Wayland: Boolean; Log: TLogger; out Missing: TStringArray; out Warning: string): Boolean;
 
 implementation
 
@@ -37,14 +37,30 @@ begin
   end;
 end;
 
-function ValidateAssets(const AssetsDir, Theme: string; Log: TLogger; out Missing: TStringArray; out Warning: string): Boolean;
+function ValidateAssets(const AssetsDir, Theme: string; Wayland: Boolean; Log: TLogger; out Missing: TStringArray; out Warning: string): Boolean;
 var
-  Lbemenu: string;
+  LauncherPath: string;
 begin
   SetLength(Missing, 0);
   Warning := '';
-  RequireFile(AssetsDir, 'i3/config', Missing);
-  RequireFile(AssetsDir, 'bin/lbemenu', Missing);
+  if Wayland then
+  begin
+    RequireFile(AssetsDir, 'sway/config', Missing);
+    RequireFile(AssetsDir, 'bin/lfuzzel', Missing);
+    RequireFile(AssetsDir, 'sway/themes/Emerald-Night.conf', Missing);
+    RequireFile(AssetsDir, 'sway/themes/Forest-Moss.conf', Missing);
+    RequireFile(AssetsDir, 'sway/themes/Sage-Light.conf', Missing);
+    RequireFile(AssetsDir, 'sway/themes/' + Theme + '.conf', Missing);
+    RequireFile(AssetsDir, 'fuzzel/themes/Emerald-Night.ini', Missing);
+    RequireFile(AssetsDir, 'fuzzel/themes/Forest-Moss.ini', Missing);
+    RequireFile(AssetsDir, 'fuzzel/themes/Sage-Light.ini', Missing);
+    RequireFile(AssetsDir, 'fuzzel/themes/' + Theme + '.ini', Missing);
+  end
+  else
+  begin
+    RequireFile(AssetsDir, 'i3/config', Missing);
+    RequireFile(AssetsDir, 'bin/lbemenu', Missing);
+  end;
   RequireFile(AssetsDir, 'kitty/kitty.conf', Missing);
   RequireFile(AssetsDir, 'kitty/themes/Emerald-Night.conf', Missing);
   RequireFile(AssetsDir, 'kitty/themes/Forest-Moss.conf', Missing);
@@ -54,9 +70,12 @@ begin
     AddString(Missing, 'wallpapers/')
   else if not HasWallpaper(AssetsDir) then
     AddString(Missing, 'wallpapers/*');
-  Lbemenu := AssetsDir + DirectorySeparator + 'bin' + DirectorySeparator + 'lbemenu';
-  if FileExists(Lbemenu) and (fpAccess(PChar(Lbemenu), X_OK) <> 0) then
-    Warning := 'assets/bin/lbemenu is not executable; release packaging will chmod it';
+  if Wayland then
+    LauncherPath := AssetsDir + DirectorySeparator + 'bin' + DirectorySeparator + 'lfuzzel'
+  else
+    LauncherPath := AssetsDir + DirectorySeparator + 'bin' + DirectorySeparator + 'lbemenu';
+  if FileExists(LauncherPath) and (fpAccess(PChar(LauncherPath), X_OK) <> 0) then
+    Warning := 'assets/bin/' + ExtractFileName(LauncherPath) + ' is not executable; release packaging will chmod it';
   Result := Length(Missing) = 0;
   if Assigned(Log) then
   begin

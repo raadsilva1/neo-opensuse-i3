@@ -7,7 +7,7 @@ interface
 uses
   SysUtils, models, display_manager, logger;
 
-function ShouldInstallXinitrc(Mode: TInstallXinitrcMode; const DM: TDisplayManagerInfo): Boolean;
+function ShouldInstallXinitrc(Mode: TInstallXinitrcMode; const DM: TDisplayManagerInfo; Wayland: Boolean): Boolean;
 function InstallXinitrcForUser(const U: TUserInfo; const BackupRoot: string; DryRun: Boolean; Log: TLogger): Boolean;
 
 implementation
@@ -20,8 +20,13 @@ const
     '#!/bin/sh' + LineEnding +
     'exec /usr/local/bin/neo-opensuse-i3-session' + LineEnding;
 
-function ShouldInstallXinitrc(Mode: TInstallXinitrcMode; const DM: TDisplayManagerInfo): Boolean;
+function ShouldInstallXinitrc(Mode: TInstallXinitrcMode; const DM: TDisplayManagerInfo; Wayland: Boolean): Boolean;
 begin
+  if Wayland then
+  begin
+    Result := False;
+    Exit;
+  end;
   case Mode of
     xmAlways: Result := True;
     xmNever: Result := False;

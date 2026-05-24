@@ -18,9 +18,9 @@ release: $(BIN)
 	mkdir -p release
 	cp $(BIN) release/neo-opensuse-i3
 	cp -a assets release/assets
-	chmod 0755 release/neo-opensuse-i3 release/assets/bin/lbemenu
-	(cd release && sha256sum neo-opensuse-i3 assets/i3/config assets/bin/lbemenu assets/kitty/kitty.conf assets/kitty/themes/*.conf assets/wallpapers/* > SHA256SUMS)
-	printf '%s\n' 'neo-opensuse-i3 1.0.0' 'Ready-to-run openSUSE Tumbleweed i3 installer bundle.' > release/RELEASE-NOTES.txt
+	chmod 0755 release/neo-opensuse-i3 release/assets/bin/lbemenu release/assets/bin/lfuzzel
+	(cd release && sha256sum neo-opensuse-i3 assets/i3/config assets/bin/lbemenu assets/sway/config assets/sway/themes/*.conf assets/bin/lfuzzel assets/fuzzel/themes/*.ini assets/kitty/kitty.conf assets/kitty/themes/*.conf assets/wallpapers/* > SHA256SUMS)
+	printf '%s\n' 'neo-opensuse-i3 1.0.0' 'Ready-to-run openSUSE Tumbleweed i3/Sway installer bundle.' > release/RELEASE-NOTES.txt
 
 clean:
 	rm -rf $(BUILD_DIR) release

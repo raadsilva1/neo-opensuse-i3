@@ -48,6 +48,7 @@ begin
     else if Arg = '--force' then Options.Force := True
     else if Arg = '--rollback' then Options.Rollback := True
     else if Arg = '--list-backups' then Options.ListBackups := True
+    else if Arg = '--wayland' then Options.Wayland := True
     else if Arg = '--all-sudo-users' then Options.AllSudoUsers := True
     else if Arg = '--assets-dir' then
     begin
@@ -116,6 +117,7 @@ begin
   Writeln('  --assets-dir PATH');
   Writeln('  --rollback');
   Writeln('  --list-backups');
+  Writeln('  --wayland');
   Writeln('  --all-sudo-users');
   Writeln('  --user USER');
   Writeln('  --exclude-user USER');

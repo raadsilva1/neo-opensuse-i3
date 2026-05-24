@@ -7,7 +7,7 @@ interface
 uses
   SysUtils, models, logger, gpu_detect;
 
-function ResolvePackages(const GPU: TGPUInfo; Log: TLogger; out Decisions: TPackageDecisionArray; out MissingRequired, ToInstall: TStringArray): Boolean;
+function ResolvePackages(const Options: TCLIOptions; const GPU: TGPUInfo; Log: TLogger; out Decisions: TPackageDecisionArray; out MissingRequired, ToInstall: TStringArray): Boolean;
 
 implementation
 
@@ -46,24 +46,40 @@ begin
       Exit(True);
 end;
 
-function ResolvePackages(const GPU: TGPUInfo; Log: TLogger; out Decisions: TPackageDecisionArray; out MissingRequired, ToInstall: TStringArray): Boolean;
+function ResolvePackages(const Options: TCLIOptions; const GPU: TGPUInfo; Log: TLogger; out Decisions: TPackageDecisionArray; out MissingRequired, ToInstall: TStringArray): Boolean;
 const
-  RequiredPkgs: array[0..21] of string = (
+  XorgRequiredPkgs: array[0..21] of string = (
     'i3', 'bemenu', 'ghostty', 'kitty', 'feh', 'scrot', 'i3lock', 'brightnessctl', 'xset', 'xrandr',
     'xinit', 'xauth', 'dbus-1', 'pipewire', 'wireplumber',
     'google-noto-sans-fonts', 'google-noto-coloremoji-fonts',
     'Mesa', 'Mesa-dri', 'Mesa-libGL1', 'Mesa-libEGL1', 'libvulkan1');
-  OptionalPkgs: array[0..0] of string = ('alacritty');
+  XorgOptionalPkgs: array[0..0] of string = ('alacritty');
+  WaylandRequiredPkgs: array[0..18] of string = (
+    'sway', 'fuzzel', 'ghostty', 'kitty', 'grim', 'slurp', 'swaylock', 'swaybg',
+    'brightnessctl', 'wl-clipboard', 'dbus-1', 'pipewire', 'wireplumber',
+    'google-noto-sans-fonts', 'google-noto-coloremoji-fonts',
+    'Mesa', 'Mesa-dri', 'Mesa-libEGL1', 'libvulkan1');
+  WaylandOptionalPkgs: array[0..1] of string = ('alacritty', 'mako');
 var
   I: Integer;
 begin
   SetLength(Decisions, 0);
   SetLength(MissingRequired, 0);
   SetLength(ToInstall, 0);
-  for I := Low(RequiredPkgs) to High(RequiredPkgs) do
-    AddDecision(Decisions, RequiredPkgs[I], 'required', True, Log, MissingRequired, ToInstall);
-  for I := Low(OptionalPkgs) to High(OptionalPkgs) do
-    AddDecision(Decisions, OptionalPkgs[I], 'recommended', False, Log, MissingRequired, ToInstall);
+  if Options.Wayland then
+  begin
+    for I := Low(WaylandRequiredPkgs) to High(WaylandRequiredPkgs) do
+      AddDecision(Decisions, WaylandRequiredPkgs[I], 'required', True, Log, MissingRequired, ToInstall);
+    for I := Low(WaylandOptionalPkgs) to High(WaylandOptionalPkgs) do
+      AddDecision(Decisions, WaylandOptionalPkgs[I], 'recommended', False, Log, MissingRequired, ToInstall);
+  end
+  else
+  begin
+    for I := Low(XorgRequiredPkgs) to High(XorgRequiredPkgs) do
+      AddDecision(Decisions, XorgRequiredPkgs[I], 'required', True, Log, MissingRequired, ToInstall);
+    for I := Low(XorgOptionalPkgs) to High(XorgOptionalPkgs) do
+      AddDecision(Decisions, XorgOptionalPkgs[I], 'recommended', False, Log, MissingRequired, ToInstall);
+  end;
   for I := 0 to High(GPU.Packages) do
     if not HasDecision(Decisions, GPU.Packages[I]) then
       AddDecision(Decisions, GPU.Packages[I], 'platform', False, Log, MissingRequired, ToInstall);
